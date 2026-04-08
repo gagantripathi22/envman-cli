@@ -11,6 +11,18 @@ const del = require('../src/commands/delete');
 const exp = require('../src/commands/export');
 const imp = require('../src/commands/import');
 
+// Helper function for prompts with Back option
+async function selectWithBack(choices, message = '') {
+  choices.push({ value: '__back__', message: `  ${pc.gray('← Back')}` });
+  const prompt = new Select({
+    name: 'result',
+    message,
+    choices,
+    styles: { selected: () => '', cursor: () => pc.cyan('▸ ') },
+  });
+  return await prompt.run();
+}
+
 async function showInteractiveMenu() {
   const envman = createEnvManager();
 
@@ -106,19 +118,8 @@ async function runListInteractive(envman) {
       value: e.key,
       message: `  ${pc.cyan(e.key.padEnd(30))}  ${pc.dim(e.value ? e.value.substring(0, 40) : '(empty)')}`,
     }));
-    choices.push({ value: '__back__', message: `  ${pc.gray('← Back to menu')}` });
 
-    const selectPrompt = new Select({
-      name: 'key',
-      message: '',
-      choices,
-      styles: {
-        selected: () => '',
-        cursor: () => pc.cyan('▸ '),
-      },
-    });
-
-    const selectedKey = await selectPrompt.run();
+    const selectedKey = await selectWithBack(choices, '');
 
     if (selectedKey === '__back__') {
       return;
@@ -126,12 +127,11 @@ async function runListInteractive(envman) {
 
     const selected = envVars.find((e) => e.key === selectedKey);
 
-    console.log(pc.dim('\n  ─── Choose action ───'));
+    // Action selection loop
+    while (true) {
+      console.log(pc.dim('\n  ─── Choose action ───'));
 
-    const actionPrompt = new Select({
-      name: 'action',
-      message: '',
-      choices: [
+      const action = await selectWithBack([
         {
           value: 'view',
           message: `  ${pc.green('View')}         ${pc.dim('view full value')}`,
@@ -144,158 +144,154 @@ async function runListInteractive(envman) {
           value: 'delete',
           message: `  ${pc.red('Delete')}        ${pc.dim('remove this variable')}`,
         },
-        {
-          value: 'back',
-          message: `  ${pc.gray('Back')}          ${pc.dim('select different')}`,
-        },
-      ],
-      styles: {
-        selected: () => '',
-        cursor: () => pc.cyan('▸ '),
-      },
-    });
+      ], '');
 
-    const chosenAction = await actionPrompt.run();
-
-    if (chosenAction === 'back') {
-      continue;
-    }
-
-    if (chosenAction === 'view') {
-      console.log('');
-      console.log(pc.green('  ─── Full Value ───'));
-      console.log(`  ${pc.bold('Key:')}   ${pc.cyan(selected.key)}`);
-      console.log(`  ${pc.bold('Value:')}`);
-      console.log(`  ${pc.green(selected.value || '(empty)')}`);
-      console.log('');
-
-      await new Select({
-        name: 'cont',
-        message: '',
-        choices: [{ value: 'ok', message: `  ${pc.gray('Continue')}` }],
-        styles: { selected: () => '', cursor: () => pc.cyan('▸ ') },
-      }).run();
-    } else if (chosenAction === 'edit') {
-      const newValue = await new Input({
-        name: 'value',
-        message: `${pc.cyan('New value:')}`,
-        initial: selected.value || '',
-      }).run();
-
-      const confirmPrompt = new Select({
-        name: 'confirm',
-        message: pc.dim(`Set ${pc.cyan(selected.key)} to "${pc.green(newValue)}"?`),
-        choices: [
-          { value: 'yes', message: `  ${pc.green('Yes, set it')}` },
-          { value: 'no', message: `  ${pc.gray('No, cancel')}` },
-        ],
-        styles: { selected: () => '', cursor: () => pc.cyan('▸ ') },
-      });
-
-      const confirm = await confirmPrompt.run();
-
-      if (confirm === 'yes') {
-        process.env[selected.key] = newValue;
-        console.log(pc.green(`\n  ✓ Updated ${selected.key}\n`));
+      if (action === '__back__') {
+        break; // Go back to variable selection
       }
-    } else if (chosenAction === 'delete') {
-      const confirmPrompt = new Select({
-        name: 'confirm',
-        message: pc.dim(`Delete ${pc.red(selected.key)}?`),
-        choices: [
-          { value: 'yes', message: `  ${pc.red('Yes, delete')}` },
-          { value: 'no', message: `  ${pc.gray('No, cancel')}` },
-        ],
-        styles: { selected: () => '', cursor: () => pc.cyan('▸ ') },
-      });
 
-      const confirm = await confirmPrompt.run();
+      if (action === 'view') {
+        console.log('');
+        console.log(pc.green('  ─── Full Value ───'));
+        console.log(`  ${pc.bold('Key:')}   ${pc.cyan(selected.key)}`);
+        console.log(`  ${pc.bold('Value:')}`);
+        console.log(`  ${pc.green(selected.value || '(empty)')}`);
+        console.log('');
 
-      if (confirm === 'yes') {
-        delete process.env[selected.key];
-        console.log(pc.green(`\n  ✓ Deleted ${selected.key}\n`));
-        envVars = await envman.list('');
+        await selectWithBack([], '');
+      } else if (action === 'edit') {
+        const newValue = await new Input({
+          name: 'value',
+          message: `${pc.cyan('New value:')}`,
+          initial: selected.value || '',
+        }).run();
+
+        if (newValue === undefined) {
+          continue; // User pressed escape, show actions again
+        }
+
+        const confirm = await selectWithBack([
+          { value: 'yes', message: `  ${pc.green('✓ Confirm')}      ${pc.dim('save changes')}` },
+          { value: 'no', message: `  ${pc.gray('✗ Cancel')}      ${pc.dim('discard changes')}` },
+        ], '');
+
+        if (confirm === '__back__') {
+          continue;
+        }
+
+        if (confirm === 'yes') {
+          process.env[selected.key] = newValue;
+          console.log(pc.green(`\n  ✓ Updated ${selected.key}\n`));
+        }
+      } else if (action === 'delete') {
+        const confirm = await selectWithBack([
+          { value: 'yes', message: `  ${pc.red('✓ Delete')}      ${pc.dim('remove permanently')}` },
+          { value: 'no', message: `  ${pc.gray('✗ Cancel')}      ${pc.dim('keep variable')}` },
+        ], pc.dim(`Delete ${pc.red(selected.key)}?`));
+
+        if (confirm === '__back__') {
+          continue;
+        }
+
+        if (confirm === 'yes') {
+          delete process.env[selected.key];
+          console.log(pc.green(`\n  ✓ Deleted ${selected.key}\n`));
+          envVars = await envman.list('');
+        }
       }
     }
   }
 }
 
 async function runGetInteractive(envman) {
-  const key = await new Input({
-    name: 'key',
-    message: `${pc.cyan('Variable name:')}`,
-  }).run();
+  while (true) {
+    const key = await new Input({
+      name: 'key',
+      message: `${pc.cyan('Variable name:')}`,
+    }).run();
 
-  const result = await envman.get(key);
+    if (key === undefined) {
+      return; // User pressed escape
+    }
 
-  console.log('');
-  if (result.value) {
-    console.log(pc.green('  ─── Result ───'));
-    console.log(`  ${pc.bold('Key:')}   ${pc.cyan(result.key)}`);
-    console.log(`  ${pc.bold('Value:')} ${pc.green(result.value)}`);
-  } else {
-    console.log(pc.yellow(`\n  ⚠ Variable '${key}' is not set\n`));
+    if (!key) {
+      const result = await selectWithBack([], pc.yellow('  ⚠ No variable name entered'));
+      if (result === '__back__') return;
+      continue;
+    }
+
+    const result = await envman.get(key);
+
+    console.log('');
+    if (result.value) {
+      console.log(pc.green('  ─── Result ───'));
+      console.log(`  ${pc.bold('Key:')}   ${pc.cyan(result.key)}`);
+      console.log(`  ${pc.bold('Value:')} ${pc.green(result.value)}`);
+    } else {
+      console.log(pc.yellow(`\n  ⚠ Variable '${key}' is not set\n`));
+    }
+    console.log('');
+
+    const cont = await selectWithBack([], '');
+    if (cont === '__back__') {
+      return;
+    }
   }
-  console.log('');
-
-  await new Select({
-    name: 'cont',
-    message: '',
-    choices: [{ value: 'ok', message: `  ${pc.gray('Continue')}` }],
-    styles: { selected: () => '', cursor: () => pc.cyan('▸ ') },
-  }).run();
 }
 
 async function runSetInteractive(envman) {
-  const key = await new Input({
-    name: 'key',
-    message: `${pc.cyan('Variable name:')}`,
-  }).run();
+  while (true) {
+    const key = await new Input({
+      name: 'key',
+      message: `${pc.cyan('Variable name:')}`,
+    }).run();
 
-  if (!key) {
-    console.log(pc.yellow('\n  ⚠ No variable name entered\n'));
-    return;
+    if (key === undefined) {
+      return; // User pressed escape
+    }
+
+    if (!key) {
+      const result = await selectWithBack([], pc.yellow('  ⚠ No variable name entered'));
+      if (result === '__back__') return;
+      continue;
+    }
+
+    const value = await new Input({
+      name: 'value',
+      message: `${pc.cyan('Variable value:')}`,
+    }).run();
+
+    if (value === undefined) {
+      continue; // User pressed escape, ask again
+    }
+
+    const scopes = envman.getScopes();
+    const scopeChoices = scopes.map((s) => ({
+      value: s.value,
+      message: `  ${pc.green(s.name)}  ${pc.dim(s.description)}`,
+    }));
+
+    console.log(pc.dim('\n  ─── Choose scope ───'));
+
+    const scope = await selectWithBack(scopeChoices, '');
+
+    if (scope === '__back__') {
+      continue;
+    }
+
+    const setResult = await envman.set(key, value, scope);
+
+    if (setResult.success) {
+      console.log(pc.green(`\n  ✓ ${setResult.message}\n`));
+    } else {
+      console.error(pc.red(`\n  ✗ ${setResult.message}\n`));
+    }
+
+    const cont = await selectWithBack([], '');
+    if (cont === '__back__') {
+      return;
+    }
   }
-
-  const value = await new Input({
-    name: 'value',
-    message: `${pc.cyan('Variable value:')}`,
-  }).run();
-
-  if (value === undefined) {
-    console.log(pc.yellow('\n  ⚠ No value entered\n'));
-    return;
-  }
-
-  const scopes = envman.getScopes();
-  const scopeChoices = scopes.map((s) => ({
-    value: s.value,
-    message: `  ${pc.green(s.name)}  ${pc.dim(s.description)}`,
-  }));
-
-  console.log(pc.dim('\n  ─── Choose scope ───'));
-
-  const scope = await new Select({
-    name: 'scope',
-    message: '',
-    choices: scopeChoices,
-    styles: { selected: () => '', cursor: () => pc.cyan('▸ ') },
-  }).run();
-
-  const result = await envman.set(key, value, scope);
-
-  if (result.success) {
-    console.log(pc.green(`\n  ✓ ${result.message}\n`));
-  } else {
-    console.error(pc.red(`\n  ✗ ${result.message}\n`));
-  }
-
-  await new Select({
-    name: 'cont',
-    message: '',
-    choices: [{ value: 'ok', message: `  ${pc.gray('Continue')}` }],
-    styles: { selected: () => '', cursor: () => pc.cyan('▸ ') },
-  }).run();
 }
 
 async function runDeleteInteractive(envman) {
@@ -307,100 +303,101 @@ async function runDeleteInteractive(envman) {
     return;
   }
 
-  const choices = envVars.map((e) => ({
-    value: e.key,
-    message: `  ${pc.red(e.key.padEnd(30))}  ${pc.dim(e.value ? e.value.substring(0, 40) : '(empty)')}`,
-  }));
-  choices.push({ value: '__back__', message: `  ${pc.gray('← Back to menu')}` });
+  while (true) {
+    const choices = envVars.map((e) => ({
+      value: e.key,
+      message: `  ${pc.red(e.key.padEnd(30))}  ${pc.dim(e.value ? e.value.substring(0, 40) : '(empty)')}`,
+    }));
 
-  console.log(pc.dim('\n  ─── Select variable to delete ───\n'));
+    console.log(pc.dim('\n  ─── Select variable to delete ───\n'));
 
-  const selectedKey = await new Select({
-    name: 'key',
-    message: '',
-    choices,
-    styles: { selected: () => '', cursor: () => pc.cyan('▸ ') },
-  }).run();
+    const selectedKey = await selectWithBack(choices, '');
 
-  if (selectedKey === '__back__') {
-    return;
+    if (selectedKey === '__back__') {
+      return;
+    }
+
+    const scopes = envman.getScopes();
+    const scopeChoices = scopes.map((s) => ({
+      value: s.value,
+      message: `  ${pc.green(s.name)}  ${pc.dim(s.description)}`,
+    }));
+
+    console.log(pc.dim('\n  ─── Choose scope to delete from ───\n'));
+
+    const scope = await selectWithBack(scopeChoices, '');
+
+    if (scope === '__back__') {
+      continue;
+    }
+
+    const deleteResult = await envman.delete(selectedKey, scope);
+
+    if (deleteResult.success) {
+      console.log(pc.green(`\n  ✓ ${deleteResult.message}\n`));
+    } else {
+      console.error(pc.red(`\n  ✗ ${deleteResult.message}\n`));
+    }
+
+    const cont = await selectWithBack([], '');
+    if (cont === '__back__') {
+      return;
+    }
   }
-
-  const scopes = envman.getScopes();
-  const scopeChoices = scopes.map((s) => ({
-    value: s.value,
-    message: `  ${pc.green(s.name)}  ${pc.dim(s.description)}`,
-  }));
-
-  console.log(pc.dim('\n  ─── Choose scope to delete from ───\n'));
-
-  const scope = await new Select({
-    name: 'scope',
-    message: '',
-    choices: scopeChoices,
-    styles: { selected: () => '', cursor: () => pc.cyan('▸ ') },
-  }).run();
-
-  const result = await envman.delete(selectedKey, scope);
-
-  if (result.success) {
-    console.log(pc.green(`\n  ✓ ${result.message}\n`));
-  } else {
-    console.error(pc.red(`\n  ✗ ${result.message}\n`));
-  }
-
-  await new Select({
-    name: 'cont',
-    message: '',
-    choices: [{ value: 'ok', message: `  ${pc.gray('Continue')}` }],
-    styles: { selected: () => '', cursor: () => pc.cyan('▸ ') },
-  }).run();
 }
 
 async function runExportInteractive(envman) {
-  const file = await new Input({
-    name: 'file',
-    message: `${pc.cyan('Export file:')}`,
-    initial: '.env',
-  }).run();
+  while (true) {
+    const file = await new Input({
+      name: 'file',
+      message: `${pc.cyan('Export file:')}`,
+      initial: '.env',
+    }).run();
 
-  const result = await envman.export(file);
+    if (file === undefined) {
+      return; // User pressed escape
+    }
 
-  if (result.success) {
-    console.log(pc.green(`\n  ✓ ${result.message}\n`));
-  } else {
-    console.error(pc.red(`\n  ✗ ${result.message}\n`));
+    const result = await envman.export(file);
+
+    if (result.success) {
+      console.log(pc.green(`\n  ✓ ${result.message}\n`));
+    } else {
+      console.error(pc.red(`\n  ✗ ${result.message}\n`));
+    }
+
+    const cont = await selectWithBack([], '');
+    if (cont === '__back__') {
+      return;
+    }
   }
-
-  await new Select({
-    name: 'cont',
-    message: '',
-    choices: [{ value: 'ok', message: `  ${pc.gray('Continue')}` }],
-    styles: { selected: () => '', cursor: () => pc.cyan('▸ ') },
-  }).run();
 }
 
 async function runImportInteractive(envman) {
-  const file = await new Input({
-    name: 'file',
-    message: `${pc.cyan('Import file:')}`,
-    initial: '.env',
-  }).run();
+  while (true) {
+    const file = await new Input({
+      name: 'file',
+      message: `${pc.cyan('Import file:')}`,
+      initial: '.env',
+    }).run();
 
-  const result = await envman.import(file);
+    if (file === undefined) {
+      return; // User pressed escape
+    }
 
-  if (result.success) {
-    console.log(pc.green(`\n  ✓ ${result.message}\n`));
-  } else {
-    console.error(pc.red(`\n  ✗ ${result.message}\n`));
+    const result = await envman.import(file);
+
+    if (result.success) {
+      console.log(pc.green(`\n  ✓ ${result.message}\n`));
+    } else {
+      console.error(pc.red(`\n  ✗ ${result.message}\n`));
+    }
+
+    const cont = await selectWithBack([], '');
+    if (cont === '__back__') {
+      return;
+    }
   }
-
-  await new Select({
-    name: 'cont',
-    message: '',
-    choices: [{ value: 'ok', message: `  ${pc.gray('Continue')}` }],
-    styles: { selected: () => '', cursor: () => pc.cyan('▸ ') },
-  }).run();
 }
 
 const program = new Command();

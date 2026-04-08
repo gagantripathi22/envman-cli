@@ -1,6 +1,6 @@
 {
   "name": "envman-cli",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Cross-platform CLI tool to manage environment variables. View, set, delete, export, import with interactive UI.",
   "main": "src/index.js",
   "bin": {
@@ -20,9 +20,9 @@
   "license": "MIT",
   "dependencies": {
     "commander": "^11.0.0",
-    "picocolors": "^1.1.1",
+    "dotenv": "^16.0.0",
     "enquirer": "^2.4.1",
-    "dotenv": "^16.0.0"
+    "picocolors": "^1.1.1"
   },
   "preferGlobal": true,
   "engines": {
