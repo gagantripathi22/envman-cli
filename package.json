@@ -1,0 +1,31 @@
+{
+  "name": "envman-cli",
+  "version": "1.0.0",
+  "description": "Cross-platform CLI tool to manage environment variables. View, set, delete, export, import with interactive UI.",
+  "main": "src/index.js",
+  "bin": {
+    "envman": "./bin/envman.js"
+  },
+  "scripts": {
+    "start": "node bin/envman.js",
+    "test": "echo \"No tests yet\" && exit 0"
+  },
+  "keywords": [
+    "env",
+    "environment",
+    "variables",
+    "cli"
+  ],
+  "author": "Gagan Tripathi",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^11.0.0",
+    "picocolors": "^1.1.1",
+    "enquirer": "^2.4.1",
+    "dotenv": "^16.0.0"
+  },
+  "preferGlobal": true,
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
