@@ -1,6 +1,6 @@
 {
   "name": "envman-cli",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Cross-platform CLI tool to manage environment variables. View, set, delete, export, import with interactive UI.",
   "main": "src/index.js",
   "bin": {

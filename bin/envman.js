@@ -39,31 +39,31 @@ async function showInteractiveMenu() {
       choices: [
         {
           value: 'list',
-          message: `  ${pc.green('📋 List')}         ${pc.dim('View all environment variables')}`,
+          message: `  ${pc.green('[L]')}         ${pc.dim('List all variables')}`,
         },
         {
           value: 'get',
-          message: `  ${pc.blue('🔍 Get')}         ${pc.dim('Get a specific variable')}`,
+          message: `  ${pc.blue('[G]')}         ${pc.dim('Get a variable')}`,
         },
         {
           value: 'set',
-          message: `  ${pc.yellow('➕ Set')}         ${pc.dim('Set a new variable')}`,
+          message: `  ${pc.yellow('[S]')}         ${pc.dim('Set a variable')}`,
         },
         {
           value: 'delete',
-          message: `  ${pc.red('🗑 Delete')}       ${pc.dim('Delete a variable')}`,
+          message: `  ${pc.red('[D]')}         ${pc.dim('Delete a variable')}`,
         },
         {
           value: 'export',
-          message: `  ${pc.cyan('📤 Export')}       ${pc.dim('Export to .env file')}`,
+          message: `  ${pc.cyan('[E]')}         ${pc.dim('Export to .env')}`,
         },
         {
           value: 'import',
-          message: `  ${pc.cyan('📥 Import')}       ${pc.dim('Import from .env file')}`,
+          message: `  ${pc.cyan('[I]')}         ${pc.dim('Import from .env')}`,
         },
         {
           value: 'quit',
-          message: `  ${pc.gray('❌ Quit')}`,
+          message: `  ${pc.gray('[Q] Quit')}`,
         },
       ],
       styles: {
