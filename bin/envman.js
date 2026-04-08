@@ -28,9 +28,8 @@ async function showInteractiveMenu() {
 
   while (true) {
     console.log('');
-    console.log(pc.cyan('  ╔═══════════════════════════════════════════════╗'));
-    console.log(pc.cyan('  ║') + pc.bold(pc.white('                envman CLI                      ')) + pc.cyan('║'));
-    console.log(pc.cyan('  ╚═══════════════════════════════════════════════╝'));
+    console.log(pc.cyan(pc.bold('  envman')) + pc.dim(' — manage environment variables'));
+    console.log(pc.dim('  ─────────────────────────────────────────────────'));
     console.log('');
 
     const mainMenu = new Select({
