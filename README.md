@@ -1,81 +1,62 @@
 # envman
 
-> Simple CLI tool to manage environment variables. Works on Linux, macOS, and Windows.
+> Manage environment variables without the headache. Works on Linux, macOS, and Windows.
 
-## Why?
+## The Problem
 
-Setting environment variables across different operating systems is confusing:
-- **macOS**: Need to use `launchctl` for GUI apps, `export` for shell
-- **Linux**: Different files for shell vs system-wide
-- **Windows**: Registry, `setx`, session vs permanent
+Every OS has its own way of handling environment variables. macOS makes you jump through hoops with `launchctl`. Linux has a dozen places to choose from. Windows has the registry. It's a mess.
 
-This tool gives you one simple interface to manage env vars on any OS.
+envman gives you one tool that just works.
 
-## Install
+## Quick Start
 
-**Install globally with npm:**
+Just run `envman` and pick what you want to do. Arrow keys, enter to select, no commands needed.
+
 ```bash
 npm install -g envman-cli
+envman
 ```
 
-**Or use without installing:**
+## What You Can Do
+
+**Interactive Mode** (just type `envman`)
+- Pick from a menu with arrow keys
+- View, set, delete, export, import
+- Always know where your vars are going
+
+**Commands** (if you prefer)
 ```bash
-npx envman-cli list
+envman list              # see all variables
+envman list PATH         # filter by name
+envman get HOME          # get one variable
+envman set MY_VAR hello  # set something new
+envman delete MY_VAR     # remove a variable
+envman export             # save to .env file
+envman import .env       # load from .env file
 ```
 
-## Usage
+## Scope Support
 
-```bash
-# List all environment variables
-envman list
+Where do you want to save it?
 
-# Filter by key name
-envman list PATH
+| OS | Scope | What it does |
+|----|-------|--------------|
+| macOS | shell | Current terminal session |
+| macOS | gui | Apps from Dock/Finder (need to logout for it to take effect) |
+| macOS | user | Your shell profile (~/.zshrc or ~/.bashrc) |
+| Linux | shell | Current terminal session |
+| Linux | user | Your shell profile |
+| Linux | system | Everyone (/etc/environment, needs sudo) |
+| Windows | session | Current CMD/PowerShell only |
+| Windows | user | Your user environment (new windows get it) |
+| Windows | system | All users (needs admin) |
 
-# Get a specific variable
-envman get HOME
+## Why This Exists
 
-# Set a variable (interactive scope selection)
-envman set MY_VAR my_value
+I got tired of:
+- Google searching "how to set environment variable macOS terminal"
+- Editing config files and not knowing which one to use
+- Variables working in terminal but not in my IDE
+- `launchctl` documentation that makes no sense
 
-# Set with specific scope
-envman set MY_VAR my_value --scope user
-
-# Delete a variable
-envman delete MY_VAR
-
-# Export to .env file
-envman export
-
-# Import from .env file
-envman import .env
-```
-
-## Scope Options
-
-**Linux:**
-- `shell` - Current shell session only
-- `user` - Your shell profile (~/.bashrc or ~/.zshrc)
-- `system` - System-wide (/etc/environment, requires sudo)
-
-**macOS:**
-- `shell` - Current shell session only
-- `gui` - GUI apps from Dock/Finder (requires logout)
-- `user` - Your shell profile (~/.bashrc or ~/.zshrc)
-
-**Windows:**
-- `session` - Current CMD/PowerShell session only
-- `user` - User environment variables
-- `system` - System-wide (requires admin)
-
-## Interactive Mode
-
-```bash
-envman list -i
-```
-
-Use arrow keys to navigate variables and choose actions.
-
-## License
-
-MIT
+So I built this. Use arrow keys, pick your scope, done.
